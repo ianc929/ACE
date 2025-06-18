@@ -8,16 +8,17 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Validate required environment variables
-required_env_vars = ['SUPABASE_URL', 'SUPABASE_KEY', 'FLASK_SECRET_KEY']
-missing_vars = [var for var in required_env_vars if not os.getenv(var) or os.getenv(var).startswith('your_')]
-
-if missing_vars:
-    print("❌ Missing or placeholder environment variables:")
-    for var in missing_vars:
-        print(f"   - {var}")
-    print("📝 Please update your .env file with actual values")
-    print("💡 Run setup_env.bat to configure your environment")
+# Validate required environment variables for development
+if os.getenv('FLASK_ENV') == 'development':
+    required_env_vars = ['SUPABASE_URL', 'SUPABASE_KEY', 'FLASK_SECRET_KEY']
+    missing_vars = [var for var in required_env_vars if not os.getenv(var) or os.getenv(var).startswith('your_')]
+    
+    if missing_vars:
+        print("❌ Missing or placeholder environment variables:")
+        for var in missing_vars:
+            print(f"   - {var}")
+        print("📝 Please update your .env file with actual values")
+        print("💡 Run setup_env.bat to configure your environment")
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
@@ -27,16 +28,21 @@ SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 
 supabase = None
-if SUPABASE_URL and SUPABASE_KEY and SUPABASE_URL != 'your_supabase_project_url_here':
-    try:
-        from supabase import create_client, Client
-        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✅ Supabase connected successfully!")
-    except Exception as e:
-        print(f"❌ Supabase connection failed: {e}")
-        print("📝 Running in fallback mode. Check QUICK_SUPABASE_SETUP.md for setup instructions.")
+if SUPABASE_URL and SUPABASE_KEY:
+    # Check for placeholder values
+    if (SUPABASE_URL.startswith('your_') or SUPABASE_URL.startswith('https://your') or 
+        SUPABASE_KEY.startswith('your_') or SUPABASE_KEY.startswith('eyJ') == False):
+        print("📝 Supabase placeholder values detected. Please configure real credentials.")
+    else:
+        try:
+            from supabase import create_client, Client
+            supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+            print("✅ Supabase connected successfully!")
+        except Exception as e:
+            print(f"❌ Supabase connection failed: {e}")
+            print("📝 Running in fallback mode. Check environment variables.")
 else:
-    print("📝 Supabase not configured. Check QUICK_SUPABASE_SETUP.md for setup instructions.")
+    print("📝 Supabase environment variables not found.")
 
 # Flask-Login setup
 login_manager = LoginManager()
