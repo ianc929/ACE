@@ -1,0 +1,48 @@
+# Environment files - NEVER commit actual credentials
+.env
+.env.local
+*.env.local
+
+# Template files are safe to commit:
+# .env.example (safe)
+# .env.development (safe) 
+# .env.production (safe)
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Test data
+addresses_test.json
+addresses.json
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node modules (if you add frontend tools later)
+node_modules/

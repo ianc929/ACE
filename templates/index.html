@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Address History Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+        }
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800">Address History Tracker</h1>
+            <div class="flex items-center space-x-4">
+                {% if user.is_authenticated %}
+                    <span class="text-gray-600">Welcome, {{ user.username }}</span>
+                    <a href="{{ url_for('logout') }}" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition duration-200">
+                        Logout
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200">
+                        Login
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% if user.is_authenticated %}
+            <div class="max-w-4xl mx-auto">
+                <!-- Add New Address Button -->
+                <div class="mb-6 text-center">
+                    <button onclick="openAddModal()" class="bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition duration-200">
+                        Add New Address
+                    </button>
+                </div>
+
+                <!-- Address History -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-2xl font-semibold mb-4">Your Address History (Past 10 Years)</h2>
+                    
+                    {% if addresses %}
+                        <div class="space-y-4">
+                            {% for address in addresses %}
+                                <div class="border rounded-lg p-4 {% if address.is_current %}bg-green-50 border-green-200{% else %}bg-gray-50{% endif %}">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1">
+                                            <div class="font-semibold text-lg">
+                                                {{ address.street_address }}
+                                                {% if address.is_current %}
+                                                    <span class="text-green-600 text-sm font-normal">(Current)</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-gray-600">
+                                                {{ address.city }}, {{ address.state }} {{ address.postal_code }}
+                                            </div>
+                                            <div class="text-gray-600">
+                                                {{ address.country }}
+                                            </div>
+                                            <div class="text-sm text-gray-500 mt-2">
+                                                <strong>Period:</strong> 
+                                                {{ address.start_date }} 
+                                                {% if address.end_date and not address.is_current %}
+                                                    to {{ address.end_date }}
+                                                {% elif address.is_current %}
+                                                    to Present
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <button onclick="deleteAddress({{ address.id }})" 
+                                                class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition duration-200">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center text-gray-500 py-8">
+                            <p>No addresses recorded yet.</p>
+                            <p class="text-sm mt-2">Click "Add New Address" to start tracking your address history.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6 text-center">
+                <h2 class="text-2xl font-semibold mb-4">Please log in to track your addresses</h2>
+                <p class="text-gray-600 mb-4">You need to be logged in to use the Address History Tracker.</p>
+                <a href="{{ url_for('login') }}" class="inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200">
+                    Login
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Add Address Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Add New Address</h3>
+                <button onclick="closeAddModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <form id="addressForm" class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Street Address:</label>
+                    <input type="text" id="street_address" required 
+                           class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="123 Main Street">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">City:</label>
+                        <input type="text" id="city" required 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="New York">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">State/Province:</label>
+                        <input type="text" id="state" required 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="NY">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Postal Code:</label>
+                        <input type="text" id="postal_code" required 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="10001">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Country:</label>
+                        <input type="text" id="country" required 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="United States">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Start Date:</label>
+                        <input type="date" id="start_date" required 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">End Date:</label>
+                        <input type="date" id="end_date" 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <div class="flex items-center">
+                    <input type="checkbox" id="is_current" class="mr-2">
+                    <label for="is_current" class="text-gray-700 text-sm">This is my current address</label>
+                </div>
+                
+                <div class="flex space-x-4 pt-4">
+                    <button type="submit" class="flex-1 bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200">
+                        Add Address
+                    </button>
+                    <button type="button" onclick="closeAddModal()" class="flex-1 bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition duration-200">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openAddModal() {
+            document.getElementById('addModal').style.display = 'block';
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+            document.getElementById('addressForm').reset();
+        }
+
+        document.getElementById('addressForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                street_address: document.getElementById('street_address').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value,
+                postal_code: document.getElementById('postal_code').value,
+                country: document.getElementById('country').value,
+                start_date: document.getElementById('start_date').value,
+                end_date: document.getElementById('end_date').value,
+                is_current: document.getElementById('is_current').checked
+            };
+
+            try {
+                const response = await fetch('/add_address', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    closeAddModal();
+                    location.reload(); // Refresh to show new address
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to add address'));
+                }
+            } catch (error) {
+                alert('Error adding address: ' + error.message);
+            }
+        });
+
+        async function deleteAddress(addressId) {
+            if (!confirm('Are you sure you want to delete this address?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/delete_address/${addressId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    location.reload(); // Refresh to remove deleted address
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete address'));
+                }
+            } catch (error) {
+                alert('Error deleting address: ' + error.message);
+            }
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('addModal');
+            if (event.target === modal) {
+                closeAddModal();
+            }
+        }
+    </script>
+</body>
+</html>
