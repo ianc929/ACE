@@ -23,6 +23,10 @@ if os.getenv('FLASK_ENV') == 'development':
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 
+# Configure for production deployment
+app.config['SERVER_NAME'] = None  # Allow any domain
+app.config['APPLICATION_ROOT'] = '/'
+
 # Supabase configuration
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
