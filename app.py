@@ -261,5 +261,8 @@ def delete_address(address_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Vercel compatibility - expose app for deployment
+app.debug = False  # Disable debug in production
+
 if __name__ == '__main__':
     app.run(debug=True)
