@@ -261,7 +261,11 @@ def delete_address(address_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Expose app for Vercel deployment
+# Vercel serverless function handler
+def handler(event, context):
+    return app
+
+# WSGI compatibility
 application = app
 
 if __name__ == '__main__':
